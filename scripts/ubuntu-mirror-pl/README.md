@@ -1,6 +1,6 @@
 # ubuntu-mirror-pl
 
-Ustawia polski mirror APT dla Ubuntu Noble i Resolute. Jesli istnieje `chrony`, podmienia tez serwery NTP na polskie.
+Ustawia polski mirror APT dla Ubuntu Noble i Resolute.
 
 Domyslnie uzywa:
 
@@ -33,4 +33,3 @@ Tworzy kopie:
 
 - `/etc/apt/sources.list.bak`,
 - `/etc/apt/sources.list.d/ubuntu.sources.bak`.
-- `/etc/chrony/chrony.conf.bak`, jesli chrony jest skonfigurowane.

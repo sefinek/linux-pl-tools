@@ -6,18 +6,79 @@
 #
 # Skrypt ustawia hybrydowe locale:
 # - jezyk systemu: angielski (en_US.UTF-8),
-# - formaty regionalne: polskie (pl_PL.UTF-8).
+# - formaty regionalne: polskie (pl_PL.UTF-8),
+# - strefe czasowa Europe/Warsaw,
+# - polskie serwery NTP w chrony, jesli chrony jest skonfigurowane.
 #
 # Uzycie: bash scripts/set-locale-pl-en/configure-locale.sh
 #
 
 set -euo pipefail
 
+CHRONY_CONF="/etc/chrony/chrony.conf"
+CHRONY_BACKUP="${CHRONY_CONF}.bak"
+CHRONY_BLOCK_START="# linux-pl-tools: polskie serwery NTP"
+CHRONY_BLOCK_END="# linux-pl-tools: end"
+NTP_SERVERS=(
+  "ntp.certum.pl iburst prefer"
+  "ntp.task.gda.pl iburst"
+  "ntp2.tp.pl iburst"
+)
+
 # Ustaw sudo tylko wtedy, gdy skrypt nie dziala jako root.
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
   SUDO="sudo"
 fi
+
+configure_chrony_if_present() {
+  if [[ ! -f "$CHRONY_CONF" ]]; then
+    echo "Info: nie znaleziono konfiguracji chrony, pomijam NTP: $CHRONY_CONF"
+    return
+  fi
+
+  echo "Tworze kopie $CHRONY_CONF -> $CHRONY_BACKUP"
+  ${SUDO} cp "$CHRONY_CONF" "$CHRONY_BACKUP"
+
+  echo "Ustawiam polskie serwery NTP w chrony"
+  TEMP_CHRONY_CONF="$(mktemp)"
+
+  awk '
+    $0 == "# linux-pl-tools: Polish NTP servers" { skip = 1; next }
+    $0 == "# linux-pl-tools: polskie serwery NTP" { skip = 1; next }
+    $0 == "# linux-pl-tools: end" { skip = 0; next }
+    skip { next }
+    /^[[:space:]]*(server|pool|peer)[[:space:]]+/ { next }
+    { print }
+  ' "$CHRONY_CONF" > "$TEMP_CHRONY_CONF"
+
+  {
+    echo
+    echo "$CHRONY_BLOCK_START"
+    for server in "${NTP_SERVERS[@]}"; do
+      echo "server $server"
+    done
+    echo "$CHRONY_BLOCK_END"
+  } >> "$TEMP_CHRONY_CONF"
+
+  ${SUDO} cp "$TEMP_CHRONY_CONF" "$CHRONY_CONF"
+  rm -f "$TEMP_CHRONY_CONF"
+
+  if command -v systemctl >/dev/null 2>&1 && systemctl cat chrony.service >/dev/null 2>&1; then
+    echo "Restartuje chrony.service"
+    ${SUDO} systemctl restart chrony.service
+  elif command -v service >/dev/null 2>&1; then
+    echo "Restartuje chrony"
+    ${SUDO} service chrony restart
+  else
+    echo "Blad: nie udalo sie automatycznie zrestartowac chrony" >&2
+    return 1
+  fi
+
+  if command -v chronyc >/dev/null 2>&1; then
+    chronyc sources || true
+  fi
+}
 
 # Sprawdz, czy to system oparty o Debiana.
 if ! command -v apt-get >/dev/null 2>&1; then
@@ -67,6 +128,8 @@ ${SUDO} update-locale \
   LC_TELEPHONE=pl_PL.UTF-8 \
   LC_IDENTIFICATION=pl_PL.UTF-8 \
   LC_ALL=""
+
+configure_chrony_if_present
 
 # Pokaz zapisane ustawienia.
 echo

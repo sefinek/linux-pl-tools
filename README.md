@@ -6,7 +6,7 @@ Moje skrypty do podstawowej konfiguracji polskich serwerow Linux. Używam je gdy
 
 ### 🌍 set-locale-pl-en
 
-Ustawia angielski jezyk systemu, polskie formaty regionalne i timezone `Europe/Warsaw`.
+Ustawia angielski jezyk systemu, polskie formaty regionalne, timezone `Europe/Warsaw` i polskie NTP w `chrony`, jesli istnieje.
 
 System: Debian/Ubuntu
 
@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts
 
 ### 📦 ubuntu-mirror-pl
 
-Ustawia polski mirror APT dla Ubuntu Noble/Resolute. Jesli istnieje `chrony`, podmienia tez serwery NTP na polskie.
+Ustawia polski mirror APT dla Ubuntu Noble/Resolute.
 
 System: Ubuntu Noble/Resolute
 

@@ -9,6 +9,12 @@
 set -euo pipefail
 SECONDS=0
 
+# Ustaw sudo tylko wtedy, gdy skrypt nie dziala jako root.
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then
+  SUDO="sudo"
+fi
+
 # Logowanie
 log() {
   local level="$1"; shift
@@ -29,18 +35,9 @@ LIST_FILE="/etc/apt/sources.list"
 LIST_BACKUP="${LIST_FILE}.bak"
 KEYRING="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
 SUPPORTED_CODENAMES=("noble" "resolute")
-CHRONY_CONF="/etc/chrony/chrony.conf"
-CHRONY_BACKUP="${CHRONY_CONF}.bak"
-CHRONY_BLOCK_START="# linux-pl-tools: polskie serwery NTP"
-CHRONY_BLOCK_END="# linux-pl-tools: end"
-NTP_SERVERS=(
-  "ntp.certum.pl iburst prefer"
-  "ntp.task.gda.pl iburst"
-  "ntp2.tp.pl iburst"
-)
 
 # Sprawdz, czy lsb_release jest dostepne.
-command -v lsb_release >/dev/null || { log error "Brakuje lsb_release. Zainstaluj: sudo apt install lsb-release"; exit 1; }
+command -v lsb_release >/dev/null || { log error "Brakuje lsb_release. Zainstaluj pakiet: lsb-release"; exit 1; }
 
 # Sprawdz codename Ubuntu.
 DISTRO_CODENAME="$(lsb_release -sc)"
@@ -56,55 +53,6 @@ if [[ "$SUPPORTED" != true ]]; then
   log error "Wspierane codename Ubuntu: ${SUPPORTED_CODENAMES[*]} (wykryto: $DISTRO_CODENAME)"
   exit 1
 fi
-
-configure_chrony_if_present() {
-  if [[ ! -f "$CHRONY_CONF" ]]; then
-    log info "Nie znaleziono konfiguracji chrony, pomijam NTP: $CHRONY_CONF"
-    return
-  fi
-
-  log info "Tworze kopie $CHRONY_CONF -> $CHRONY_BACKUP"
-  sudo cp "$CHRONY_CONF" "$CHRONY_BACKUP"
-
-  log info "Ustawiam polskie serwery NTP w chrony"
-  TEMP_CHRONY_CONF="$(mktemp)"
-
-  awk '
-    $0 == "# linux-pl-tools: Polish NTP servers" { skip = 1; next }
-    $0 == "# linux-pl-tools: polskie serwery NTP" { skip = 1; next }
-    $0 == "# linux-pl-tools: end" { skip = 0; next }
-    skip { next }
-    /^[[:space:]]*(server|pool|peer)[[:space:]]+/ { next }
-    { print }
-  ' "$CHRONY_CONF" > "$TEMP_CHRONY_CONF"
-
-  {
-    echo
-    echo "$CHRONY_BLOCK_START"
-    for server in "${NTP_SERVERS[@]}"; do
-      echo "server $server"
-    done
-    echo "$CHRONY_BLOCK_END"
-  } >> "$TEMP_CHRONY_CONF"
-
-  sudo cp "$TEMP_CHRONY_CONF" "$CHRONY_CONF"
-  rm -f "$TEMP_CHRONY_CONF"
-
-  if command -v systemctl >/dev/null 2>&1 && systemctl cat chrony.service >/dev/null 2>&1; then
-    log info "Restartuje chrony.service"
-    sudo systemctl restart chrony.service
-  elif command -v service >/dev/null 2>&1; then
-    log info "Restartuje chrony"
-    sudo service chrony restart
-  else
-    log error "Nie udalo sie automatycznie zrestartowac chrony"
-    return 1
-  fi
-
-  if command -v chronyc >/dev/null 2>&1; then
-    chronyc sources || true
-  fi
-}
 
 # Wyciagnij hostname z MIRROR_URI.
 MIRROR_HOST=$(echo "$MIRROR_URI" | awk -F/ '{print $3}')
@@ -132,27 +80,27 @@ fi
 # Sprawdz keyring Ubuntu.
 if [[ ! -f "$KEYRING" ]]; then
   log error "Brakuje keyringa: $KEYRING"
-  echo "   Sprobuj: sudo apt install ubuntu-keyring"
+  echo "   Sprobuj: ${SUDO} apt install ubuntu-keyring"
   exit 1
 fi
 
 # Zrob kopie i wyczysc stare wpisy w sources.list.
 if [[ -f "$LIST_FILE" ]]; then
   log info "Tworze kopie $LIST_FILE -> $LIST_BACKUP"
-  sudo cp "$LIST_FILE" "$LIST_BACKUP"
+  ${SUDO} cp "$LIST_FILE" "$LIST_BACKUP"
   log info "Usuwam wpisy archive.ubuntu.com z $LIST_FILE"
-  sudo sed -i '/^deb .*archive\.ubuntu\.com/Id' "$LIST_FILE"
+  ${SUDO} sed -i '/^deb .*archive\.ubuntu\.com/Id' "$LIST_FILE"
 fi
 
 # Zrob kopie istniejacego pliku .sources.
 if [[ -f "$SOURCES_FILE" ]]; then
   log info "Tworze kopie $SOURCES_FILE -> $SOURCES_BACKUP"
-  sudo cp "$SOURCES_FILE" "$SOURCES_BACKUP"
+  ${SUDO} cp "$SOURCES_FILE" "$SOURCES_BACKUP"
 fi
 
 # Zapisz nowa konfiguracje mirrora.
 log info "Ustawiam mirror APT: $MIRROR_URI"
-sudo tee "$SOURCES_FILE" > /dev/null <<EOF
+${SUDO} tee "$SOURCES_FILE" > /dev/null <<EOF
 Types: deb
 URIs: $MIRROR_URI
 Suites: $DISTRO_CODENAME $DISTRO_CODENAME-updates $DISTRO_CODENAME-backports
@@ -168,15 +116,13 @@ EOF
 
 # Wyczysc cache APT.
 log info "Czyszcze cache APT..."
-sudo apt clean
+${SUDO} apt clean
 
 # Odwież indeks APT.
 log info "Uruchamiam apt update..."
-if sudo apt update; then
+if ${SUDO} apt update; then
   log success "Mirror ustawiony poprawnie. Czas: ${SECONDS}s."
 else
   log error "apt update nie powiodl sie. Sprawdz siec albo dostepnosc mirrora. Czas: ${SECONDS}s"
   exit 2
 fi
-
-configure_chrony_if_present
