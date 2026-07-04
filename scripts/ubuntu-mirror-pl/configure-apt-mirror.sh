@@ -1,15 +1,15 @@
 #!/bin/bash
-# Run from internet:
+# Uruchomienie z internetu:
 # bash <(curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts/ubuntu-mirror-pl/configure-apt-mirror.sh)
 # bash <(curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts/ubuntu-mirror-pl/configure-apt-mirror.sh) http://pl.archive.ubuntu.com/ubuntu/
 #
-# Usage: bash scripts/ubuntu-mirror-pl/configure-apt-mirror.sh
-# Other useful script: https://raw.githubusercontent.com/ijash/ubuntu-fastest-mirror/master/run.sh
+# Uzycie: bash scripts/ubuntu-mirror-pl/configure-apt-mirror.sh
+# Inny przydatny skrypt: https://raw.githubusercontent.com/ijash/ubuntu-fastest-mirror/master/run.sh
 
 set -euo pipefail
 SECONDS=0
 
-# Logger
+# Logowanie
 log() {
   local level="$1"; shift
   case "$level" in
@@ -20,7 +20,7 @@ log() {
   esac
 }
 
-# Config
+# Konfiguracja
 MIRROR_URI="${1:-http://ubuntu.task.gda.pl/ubuntu/}"
 SOURCES_DIR="/etc/apt/sources.list.d"
 SOURCES_FILE="$SOURCES_DIR/ubuntu.sources"
@@ -29,11 +29,20 @@ LIST_FILE="/etc/apt/sources.list"
 LIST_BACKUP="${LIST_FILE}.bak"
 KEYRING="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
 SUPPORTED_CODENAMES=("noble" "resolute")
+CHRONY_CONF="/etc/chrony/chrony.conf"
+CHRONY_BACKUP="${CHRONY_CONF}.bak"
+CHRONY_BLOCK_START="# linux-pl-tools: polskie serwery NTP"
+CHRONY_BLOCK_END="# linux-pl-tools: end"
+NTP_SERVERS=(
+  "ntp.certum.pl iburst prefer"
+  "ntp.task.gda.pl iburst"
+  "ntp2.tp.pl iburst"
+)
 
-# Check lsb_release presence
-command -v lsb_release >/dev/null || { log error "lsb_release not found. Install with: sudo apt install lsb-release"; exit 1; }
+# Sprawdz, czy lsb_release jest dostepne.
+command -v lsb_release >/dev/null || { log error "Brakuje lsb_release. Zainstaluj: sudo apt install lsb-release"; exit 1; }
 
-# Validate Ubuntu codename
+# Sprawdz codename Ubuntu.
 DISTRO_CODENAME="$(lsb_release -sc)"
 SUPPORTED=false
 for codename in "${SUPPORTED_CODENAMES[@]}"; do
@@ -44,56 +53,105 @@ for codename in "${SUPPORTED_CODENAMES[@]}"; do
 done
 
 if [[ "$SUPPORTED" != true ]]; then
-  log error "Supported Ubuntu codenames: ${SUPPORTED_CODENAMES[*]} (got: $DISTRO_CODENAME)"
+  log error "Wspierane codename Ubuntu: ${SUPPORTED_CODENAMES[*]} (wykryto: $DISTRO_CODENAME)"
   exit 1
 fi
 
-# Extract hostname from MIRROR_URI
+configure_chrony_if_present() {
+  if [[ ! -f "$CHRONY_CONF" ]]; then
+    log info "Nie znaleziono konfiguracji chrony, pomijam NTP: $CHRONY_CONF"
+    return
+  fi
+
+  log info "Tworze kopie $CHRONY_CONF -> $CHRONY_BACKUP"
+  sudo cp "$CHRONY_CONF" "$CHRONY_BACKUP"
+
+  log info "Ustawiam polskie serwery NTP w chrony"
+  TEMP_CHRONY_CONF="$(mktemp)"
+
+  awk '
+    $0 == "# linux-pl-tools: Polish NTP servers" { skip = 1; next }
+    $0 == "# linux-pl-tools: polskie serwery NTP" { skip = 1; next }
+    $0 == "# linux-pl-tools: end" { skip = 0; next }
+    skip { next }
+    /^[[:space:]]*(server|pool|peer)[[:space:]]+/ { next }
+    { print }
+  ' "$CHRONY_CONF" > "$TEMP_CHRONY_CONF"
+
+  {
+    echo
+    echo "$CHRONY_BLOCK_START"
+    for server in "${NTP_SERVERS[@]}"; do
+      echo "server $server"
+    done
+    echo "$CHRONY_BLOCK_END"
+  } >> "$TEMP_CHRONY_CONF"
+
+  sudo cp "$TEMP_CHRONY_CONF" "$CHRONY_CONF"
+  rm -f "$TEMP_CHRONY_CONF"
+
+  if command -v systemctl >/dev/null 2>&1 && systemctl cat chrony.service >/dev/null 2>&1; then
+    log info "Restartuje chrony.service"
+    sudo systemctl restart chrony.service
+  elif command -v service >/dev/null 2>&1; then
+    log info "Restartuje chrony"
+    sudo service chrony restart
+  else
+    log error "Nie udalo sie automatycznie zrestartowac chrony"
+    return 1
+  fi
+
+  if command -v chronyc >/dev/null 2>&1; then
+    chronyc sources || true
+  fi
+}
+
+# Wyciagnij hostname z MIRROR_URI.
 MIRROR_HOST=$(echo "$MIRROR_URI" | awk -F/ '{print $3}')
 
-# ICMP ping test (3 seconds)
+# Test ping ICMP.
 if command -v ping >/dev/null; then
-  log info "Pinging host: $MIRROR_HOST [3s]"
+  log info "Sprawdzam ping do hosta: $MIRROR_HOST [3s]"
   if PING_OUT=$(ping -c 3 -W 3 "$MIRROR_HOST" 2>/dev/null); then
     PING_AVG=$(echo "$PING_OUT" | awk -F'/' '/^rtt/ {printf "%.0f", $5}')
-    log success "Ping average: ${PING_AVG}ms"
+    log success "Sredni ping: ${PING_AVG}ms"
   else
-    log error "Mirror host is unreachable via ICMP (ping)"
+    log error "Host mirrora jest niedostepny przez ICMP (ping)"
     exit 1
   fi
 else
-  log info "Skipping ping test — 'ping' command not available"
+  log info "Pomijam test ping - komenda ping nie jest dostepna"
 fi
 
-# Validate APT sources dir
+# Sprawdz katalog zrodel APT.
 if [[ ! -d "$SOURCES_DIR" ]]; then
-  log error "Missing APT sources directory: $SOURCES_DIR"
+  log error "Brakuje katalogu zrodel APT: $SOURCES_DIR"
   exit 1
 fi
 
-# Check for keyring
+# Sprawdz keyring Ubuntu.
 if [[ ! -f "$KEYRING" ]]; then
-  log error "Missing keyring: $KEYRING"
-  echo "   Try: sudo apt install ubuntu-keyring"
+  log error "Brakuje keyringa: $KEYRING"
+  echo "   Sprobuj: sudo apt install ubuntu-keyring"
   exit 1
 fi
 
-# Backup and clean sources.list
+# Zrob kopie i wyczysc stare wpisy w sources.list.
 if [[ -f "$LIST_FILE" ]]; then
-  log info "Backing up $LIST_FILE -> $LIST_BACKUP"
+  log info "Tworze kopie $LIST_FILE -> $LIST_BACKUP"
   sudo cp "$LIST_FILE" "$LIST_BACKUP"
-  log info "Removing archive.ubuntu.com entries from $LIST_FILE"
+  log info "Usuwam wpisy archive.ubuntu.com z $LIST_FILE"
   sudo sed -i '/^deb .*archive\.ubuntu\.com/Id' "$LIST_FILE"
 fi
 
-# Backup existing .sources file
+# Zrob kopie istniejacego pliku .sources.
 if [[ -f "$SOURCES_FILE" ]]; then
-  log info "Backing up $SOURCES_FILE -> $SOURCES_BACKUP"
+  log info "Tworze kopie $SOURCES_FILE -> $SOURCES_BACKUP"
   sudo cp "$SOURCES_FILE" "$SOURCES_BACKUP"
 fi
 
-# Write new mirror config
-log info "Setting APT mirror to: $MIRROR_URI"
+# Zapisz nowa konfiguracje mirrora.
+log info "Ustawiam mirror APT: $MIRROR_URI"
 sudo tee "$SOURCES_FILE" > /dev/null <<EOF
 Types: deb
 URIs: $MIRROR_URI
@@ -108,15 +166,17 @@ Components: main restricted universe multiverse
 Signed-By: $KEYRING
 EOF
 
-# Clean APT cache
-log info "Cleaning APT cache..."
+# Wyczysc cache APT.
+log info "Czyszcze cache APT..."
 sudo apt clean
 
-# Update APT index
-log info "Running apt update..."
+# Odwież indeks APT.
+log info "Uruchamiam apt update..."
 if sudo apt update; then
-  log success "Mirror updated successfully! Finished in ${SECONDS}s."
+  log success "Mirror ustawiony poprawnie. Czas: ${SECONDS}s."
 else
-  log error "apt update failed! Check your network or mirror availability. Total execution time: ${SECONDS}s"
+  log error "apt update nie powiodl sie. Sprawdz siec albo dostepnosc mirrora. Czas: ${SECONDS}s"
   exit 2
 fi
+
+configure_chrony_if_present

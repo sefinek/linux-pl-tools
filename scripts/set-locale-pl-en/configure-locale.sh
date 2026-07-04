@@ -1,57 +1,57 @@
 #!/usr/bin/env bash
 #
-# Locale Configuration Script for Ubuntu/Debian Systems
-# Run from internet:
+# Konfiguracja locale dla Ubuntu/Debiana
+# Uruchomienie z internetu:
 # bash <(curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts/set-locale-pl-en/configure-locale.sh)
 #
-# This script configures a hybrid locale setup:
-# - System language: English (en_US.UTF-8) - for messages and interface
-# - Regional formats: Polish (pl_PL.UTF-8) - for dates, numbers, currency, paper size, etc...
+# Skrypt ustawia hybrydowe locale:
+# - jezyk systemu: angielski (en_US.UTF-8),
+# - formaty regionalne: polskie (pl_PL.UTF-8).
 #
-# Usage: bash scripts/set-locale-pl-en/configure-locale.sh
+# Uzycie: bash scripts/set-locale-pl-en/configure-locale.sh
 #
 
 set -euo pipefail
 
-# Check if running as root and set sudo prefix accordingly
+# Ustaw sudo tylko wtedy, gdy skrypt nie dziala jako root.
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
   SUDO="sudo"
 fi
 
-# Verify the script is running on a Debian-based system
+# Sprawdz, czy to system oparty o Debiana.
 if ! command -v apt-get >/dev/null 2>&1; then
-  echo "Error: This script requires apt-get (Debian/Ubuntu)" >&2
+  echo "Blad: ten skrypt wymaga apt-get (Debian/Ubuntu)" >&2
   exit 1
 fi
 
-# Ensure the 'locales' package is installed
+# Zainstaluj pakiet locales, jezeli go brakuje.
 if ! dpkg -s locales >/dev/null 2>&1; then
-  echo "Installing 'locales' package..."
+  echo "Instaluje pakiet locales..."
   ${SUDO} apt-get update -qq
   ${SUDO} apt-get install -y locales
   echo
 fi
 
-# Display current locale and timezone settings
-echo "--- Current Settings ---"
+# Pokaz obecne ustawienia locale i czasu.
+echo "--- Obecne ustawienia ---"
 locale
 date
 echo
 
-# Configure timezone to Europe/Warsaw (Central European Time)
+# Ustaw strefe czasowa na Europe/Warsaw.
 ${SUDO} timedatectl set-timezone Europe/Warsaw
 
-# Uncomment required locales in /etc/locale.gen (needed for Debian/Proxmox)
+# Odkomentuj wymagane locale w /etc/locale.gen.
 ${SUDO} sed -i 's/^# *en_US\.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 ${SUDO} sed -i 's/^# *pl_PL\.UTF-8 UTF-8/pl_PL.UTF-8 UTF-8/' /etc/locale.gen
 
-# Generate locale files from /etc/locale.gen
+# Wygeneruj locale.
 ${SUDO} locale-gen
 
-# Configure system-wide locale preferences
-# English: Interface language, messages, text handling, sorting
-# Polish: Time format, numbers, currency, paper size, phone numbers, etc.
+# Ustaw locale systemowe.
+# Angielski: komunikaty, tekst i sortowanie.
+# Polski: czas, liczby, waluta, papier, adresy i telefony.
 ${SUDO} update-locale \
   LANG=en_US.UTF-8 \
   LC_MESSAGES=en_US.UTF-8 \
@@ -68,18 +68,14 @@ ${SUDO} update-locale \
   LC_IDENTIFICATION=pl_PL.UTF-8 \
   LC_ALL=""
 
-# Apply locale changes to the current shell session
-if [ -f /etc/default/locale ]; then
-  set -a
-  . /etc/default/locale
-  set +a
-fi
-
-# Display updated locale and timezone settings
+# Pokaz zapisane ustawienia.
 echo
-echo "--- Updated Settings ---"
-locale
-date
+echo "--- Zapisany /etc/default/locale ---"
+${SUDO} cat /etc/default/locale
 
 echo
-echo "Note: For changes to apply globally, open a new terminal session or run: exec bash"
+echo "--- Strefa czasowa ---"
+timedatectl | grep 'Time zone' || true
+
+echo
+echo "Info: otworz nowa sesje shella, aby locale zaczelo dzialac w Twoim srodowisku."
