@@ -1,0 +1,26 @@
+{
+  "name": "linux-pl-tools",
+  "version": "1.0.0",
+  "description": "Linux tools for Polish users: locale setup, regional formats, Ubuntu mirrors, and NTP server configuration.",
+  "homepage": "https://github.com/sefinek/linux-pl-tools#readme",
+  "bugs": {
+    "url": "https://github.com/sefinek/linux-pl-tools/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sefinek/linux-pl-tools.git"
+  },
+  "license": "MIT",
+  "author": "Sefinek <contact@sefinek.net> (https://sefinek.net)",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint scripts/**/*.js",
+    "m": "ncu -u && npm install && npm update",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "globals": "^17.7.0"
+  }
+}

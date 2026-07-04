@@ -1,0 +1,50 @@
+Testing 18 NTP servers...
+Tries per server: 7
+Minimum replies for recommendation: 4/7
+
+Testing ntp3.orange.pl... OK replies=7/7 delay=14.40ms offset=-131.33ms jitter=1.50ms stratum=1
+Testing ntp2.tp.pl... OK replies=7/7 delay=13.25ms offset=-131.65ms jitter=0.35ms stratum=1
+Testing ntp2.orange.pl... OK replies=7/7 delay=13.67ms offset=-131.86ms jitter=0.33ms stratum=1
+Testing ntp.task.gda.pl... OK replies=7/7 delay=14.72ms offset=-131.69ms jitter=0.24ms stratum=2
+Testing puck.cbk.poznan.pl... OK replies=7/7 delay=14.84ms offset=-132.04ms jitter=0.35ms stratum=1
+Testing ntp.certum.pl... OK replies=7/7 delay=10.25ms offset=-131.66ms jitter=0.35ms stratum=1
+Testing ntp1.orange.pl... OK replies=7/7 delay=19.04ms offset=-131.79ms jitter=0.59ms stratum=1
+Testing ntp1.tp.pl... OK replies=7/7 delay=19.58ms offset=-131.25ms jitter=0.95ms stratum=1
+Testing ntp.nask.pl... OK replies=7/7 delay=20.82ms offset=-131.79ms jitter=0.12ms stratum=1
+Testing ntp.itl.waw.pl... OK replies=7/7 delay=20.17ms offset=-131.74ms jitter=0.18ms stratum=1
+Testing ntp.coi.pw.edu.pl... OK replies=7/7 delay=19.66ms offset=-131.75ms jitter=0.33ms stratum=1
+Testing ntp.icm.edu.pl... OK replies=7/7 delay=43.84ms offset=-132.16ms jitter=2.22ms stratum=2
+Testing ntp2.icm.edu.pl... OK replies=7/7 delay=43.69ms offset=-130.53ms jitter=2.27ms stratum=2
+Testing tempus2.gum.gov.pl... OK replies=7/7 delay=47.29ms offset=-127.35ms jitter=2.38ms stratum=1
+Testing ntp1.icm.edu.pl... OK replies=7/7 delay=44.14ms offset=-131.34ms jitter=1.75ms stratum=2
+Testing ntp.oa.uj.edu.pl... OK replies=7/7 delay=26.74ms offset=-132.74ms jitter=0.68ms stratum=1
+Testing tempus1.gum.gov.pl... OK replies=7/7 delay=47.68ms offset=-127.71ms jitter=1.38ms stratum=1
+Testing time.umk.pl... OK replies=1/7 delay=53.26ms offset=-131.17ms jitter=0.00ms stratum=1
+
+=== Ranking by NTP quality ===
+ 1. ntp.certum.pl            replies=7/7 stratum=1 delay=10.25ms best=9.38ms worst=11.69ms offset=-131.66ms jitter=0.35ms rootdist=0.17ms
+ 2. ntp.itl.waw.pl           replies=7/7 stratum=1 delay=20.17ms best=19.73ms worst=20.84ms offset=-131.74ms jitter=0.18ms rootdist=0.26ms
+ 3. ntp.oa.uj.edu.pl         replies=7/7 stratum=1 delay=26.74ms best=25.27ms worst=29.15ms offset=-132.74ms jitter=0.68ms rootdist=0.64ms
+ 4. tempus2.gum.gov.pl       replies=7/7 stratum=1 delay=47.29ms best=38.97ms worst=50.79ms offset=-127.35ms jitter=2.38ms rootdist=1.01ms
+ 5. ntp.coi.pw.edu.pl        replies=7/7 stratum=1 delay=19.66ms best=18.49ms worst=21.26ms offset=-131.75ms jitter=0.33ms rootdist=1.02ms
+ 6. ntp1.tp.pl               replies=7/7 stratum=1 delay=19.58ms best=18.24ms worst=23.79ms offset=-131.25ms jitter=0.95ms rootdist=1.02ms
+ 7. ntp3.orange.pl           replies=7/7 stratum=1 delay=14.40ms best=13.10ms worst=22.24ms offset=-131.33ms jitter=1.50ms rootdist=1.04ms
+ 8. puck.cbk.poznan.pl       replies=7/7 stratum=1 delay=14.84ms best=14.48ms worst=15.58ms offset=-132.04ms jitter=0.35ms rootdist=1.05ms
+ 9. tempus1.gum.gov.pl       replies=7/7 stratum=1 delay=47.68ms best=41.38ms worst=48.77ms offset=-127.71ms jitter=1.38ms rootdist=1.05ms
+10. ntp.nask.pl              replies=7/7 stratum=1 delay=20.82ms best=20.09ms worst=21.27ms offset=-131.79ms jitter=0.12ms rootdist=1.08ms
+11. ntp2.tp.pl               replies=7/7 stratum=1 delay=13.25ms best=12.27ms worst=14.05ms offset=-131.65ms jitter=0.35ms rootdist=1.08ms
+12. ntp2.orange.pl           replies=7/7 stratum=1 delay=13.67ms best=13.20ms worst=14.83ms offset=-131.86ms jitter=0.33ms rootdist=1.10ms
+13. ntp1.orange.pl           replies=7/7 stratum=1 delay=19.04ms best=17.51ms worst=22.68ms offset=-131.79ms jitter=0.59ms rootdist=1.10ms
+14. ntp.task.gda.pl          replies=7/7 stratum=2 delay=14.72ms best=14.59ms worst=15.76ms offset=-131.69ms jitter=0.24ms rootdist=3.56ms
+15. ntp1.icm.edu.pl          replies=7/7 stratum=2 delay=44.14ms best=36.76ms worst=49.71ms offset=-131.34ms jitter=1.75ms rootdist=28.03ms
+16. ntp.icm.edu.pl           replies=7/7 stratum=2 delay=43.84ms best=36.25ms worst=49.86ms offset=-132.16ms jitter=2.22ms rootdist=30.40ms
+17. ntp2.icm.edu.pl          replies=7/7 stratum=2 delay=43.69ms best=36.18ms worst=48.06ms offset=-130.53ms jitter=2.27ms rootdist=30.43ms
+18. time.umk.pl              replies=1/7 stratum=1 delay=53.26ms best=53.26ms worst=53.26ms offset=-131.17ms jitter=0.00ms rootdist=0.20ms
+
+Best server:
+server ntp.certum.pl iburst
+
+Suggested chrony config:
+server ntp.certum.pl iburst prefer
+server ntp.itl.waw.pl iburst
+server ntp.oa.uj.edu.pl iburst
