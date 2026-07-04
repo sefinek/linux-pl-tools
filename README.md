@@ -1,10 +1,10 @@
-# linux-pl-tools
+# 🐧 linux-pl-tools
 
 Moje skrypty do podstawowej konfiguracji polskich serwerow Linux. Używam je gdy coś nowego stawiam.
 
-## Skrypty
+## 🛠️ Skrypty
 
-### set-locale-pl-en
+### 🌍 set-locale-pl-en
 
 Ustawia angielski jezyk systemu, polskie formaty regionalne i timezone `Europe/Warsaw`.
 
@@ -14,7 +14,7 @@ System: Debian/Ubuntu
 bash <(curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts/set-locale-pl-en/configure-locale.sh)
 ```
 
-### benchmark-polish-ntp-servers
+### ⏱️ benchmark-polish-ntp-servers
 
 Testuje polskie serwery NTP i proponuje konfiguracje dla `chrony`.
 
@@ -24,9 +24,9 @@ System: Linux z Node.js
 curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts/set-locale-pl-en/benchmark-polish-ntp-servers.js | node
 ```
 
-### ubuntu-mirror-pl
+### 📦 ubuntu-mirror-pl
 
-Ustawia polski mirror APT dla Ubuntu Noble/Resolute.
+Ustawia polski mirror APT dla Ubuntu Noble/Resolute. Jesli istnieje `chrony`, podmienia tez serwery NTP na polskie.
 
 System: Ubuntu Noble/Resolute
 
@@ -34,10 +34,10 @@ System: Ubuntu Noble/Resolute
 bash <(curl -fsSL https://raw.githubusercontent.com/sefinek/linux-pl-tools/main/scripts/ubuntu-mirror-pl/configure-apt-mirror.sh)
 ```
 
-## Struktura
+## 📁 Struktura
 
 Skrypty sa w `scripts/<nazwa>/`. Jesli narzedzie ma dodatkowe pliki albo przyklady, trzymam je w tym samym katalogu.
 
-## Licencja
+## 📄 Licencja
 
 MIT
