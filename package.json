@@ -1,6 +1,7 @@
 {
   "name": "linux-pl-tools",
   "version": "1.0.0",
+  "private": true,
   "description": "Linux tools for Polish users: locale setup, regional formats, Ubuntu mirrors, and NTP server configuration.",
   "homepage": "https://github.com/sefinek/linux-pl-tools#readme",
   "bugs": {
